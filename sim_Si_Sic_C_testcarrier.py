@@ -8,7 +8,7 @@ silicon = Silicon()
 siliconCarbide = SiliconCarbide()
 
 materials = [diamond, silicon, siliconCarbide]
-materials = [diamond]
+
 plt.figure()
 plt.title("Induced corrent on electrode")
 plt.xlabel("t(s)")

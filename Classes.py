@@ -1,4 +1,5 @@
 import numpy as np
+from numba import jit
 
 class Carrier:
     def __init__(self, xo, yo, zo, trackID):
@@ -8,7 +9,7 @@ class Carrier:
         self.t = [0]
         self.trackID = trackID
         self.track = [[self.x,self.y,self.z]]
-        self.velocity = []
+        self.velocity = [0,0,0]
         self.charge = 0 # field movement orientation
         
     def SetNewPosition(self, x, y, z):
@@ -116,15 +117,16 @@ class Geometry:
         self.electrodes.append(PlanarElectrode(self.zLen/2, self.zLen/10, self.zLen, 1))
         self.electrodes.append(PlanarElectrode(-self.zLen/2, self.zLen/10, self.zLen, 2))
         
+                    
 class CarrierDrift:
     def __init__(self, geometry, dt):
         self.geometry = geometry 
         self.dt = dt
         
-    def ElectrodeIndCurrent(self, carrier):
+    def ElectrodeIndCurrent(self, carrier, nStep):
         # Calculate induced current with Shockley-Ramo Theorem in each electrode.
         for electrode in self.geometry.electrodes:
-            v = carrier.velocity[-1]
+            v = carrier.velocity
             Wfield = electrode.WeightingField(electrode)
             Wfield_v = 0
             j = 0
@@ -133,28 +135,29 @@ class CarrierDrift:
                 j += 1
             i = abs(carrier.charge)*Wfield_v
             if (carrier.charge < 0):
-                if (len(carrier.velocity) > len(electrode.current_e_t)):
-                    electrode.current_e_t.append([i,len(carrier.velocity)*self.dt])
+                if ( nStep > len(electrode.current_e_t)):
+                    electrode.current_e_t.append([i,nStep*self.dt])
                     
                 else:
-                    electrode.current_e_t[len(carrier.velocity) - 1][0] += i
+                    electrode.current_e_t[nStep - 1][0] += i
             else:
-                if (len(carrier.velocity) > len(electrode.current_h_t)):
-                    electrode.current_h_t.append([i,len(carrier.velocity)*self.dt])
+                if (nStep > len(electrode.current_h_t)):
+                    electrode.current_h_t.append([i,nStep*self.dt])
                     
                 else:
-                    electrode.current_h_t[len(carrier.velocity) - 1][0] += i
+                    electrode.current_h_t[nStep - 1][0] += i
                     
-            if (len(carrier.velocity) > len(electrode.current_total_t)):
-                electrode.current_total_t.append([i,len(carrier.velocity)*self.dt])
+            if (nStep > len(electrode.current_total_t)):
+                electrode.current_total_t.append([i,nStep*self.dt])
             else:
-                electrode.current_total_t[len(carrier.velocity) - 1][0] += i
-                
+                electrode.current_total_t[nStep - 1][0] += i
                     
     def DriftCarrier(self, carrier):
         # carrier
-        isParticleInBoundary = self.geometry.CheckBoundary(carrier.track[-1])
-        n = 0
+        newPosition = [carrier.track[-1][0], carrier.track[-1][1], carrier.track[-1][2]]
+        isParticleInBoundary = self.geometry.CheckBoundary(newPosition)
+        nStep = 0
+        v = 0
         while(isParticleInBoundary == False):
             E = self.geometry.Efield
             v_sat = self.geometry.material.v_sat
@@ -167,17 +170,19 @@ class CarrierDrift:
                 mu = self.geometry.material.mu_h_300k
                 v = [(mu*E[0]/((1 + (mu*E[0]/v_sat)**2))),(mu*E[1]/((1 + (mu*E[1]/v_sat)**2))),(mu*E[2]/((1 + (mu*E[2]/v_sat)**2)))]
         
-            newPosition = [(carrier.track[-1][0] + signal*v[0]*self.dt), (carrier.track[-1][1] + signal*v[1]*self.dt), (carrier.track[-1][2] + signal*v[2]*self.dt)]
+            newPosition = [(newPosition[0] + signal*v[0]*self.dt), (newPosition[1] + signal*v[1]*self.dt), (newPosition[2] + signal*v[2]*self.dt)]
             isParticleInBoundary = self.geometry.CheckBoundary(newPosition)
             if(isParticleInBoundary == False):
-                carrier.track.append(newPosition)
-                carrier.velocity.append(v)
-                self.ElectrodeIndCurrent(carrier)
-                n += 1
+                #carrier.track.append(newPosition)
+                carrier.velocity[0] = v[0]
+                carrier.velocity[1] = v[1]
+                carrier.velocity[2] = v[2]
+                nStep += 1
+                self.ElectrodeIndCurrent(carrier, nStep)
                 #print(newPosition[2])
-            else:
-                print("Done drifting")
-                print(n)
+            #else:
+            #    print("Done drifting")
+            #    print(n)
     
                       
 class GenerateCarriers:
@@ -193,15 +198,20 @@ class GenerateCarriers:
         initialPosZ = self.geometry.zLen/2
         finalPosZ = -self.geometry.zLen/2
         dz = (self.geometry.zLen/10)
-        N_eh = int(self.geometry.material.elecHoleNumber_MIP*dz*1e06)
+        N_total = self.geometry.zLen*self.geometry.material.elecHoleNumber_MIP*1e06
+        steps = int(self.geometry.zLen/dz) - 1
+        N_per_step = int(N_total/(steps))
         z = initialPosZ
-        while(z > finalPosZ):
+        nStep = 1
+        while(nStep <= steps):
             N = 1
-            z -= dz
-            while N < N_eh: #generate N_eh carrier at the point
-                self.carriers.append(Electron(positionX*1e6, positionY*1e6, z*1e6, N)) 
-                self.carriers.append(Hole(positionX*1e6, positionY*1e6, z*1e6, N))
+            z = initialPosZ - nStep*dz
+            #print(z*1e6)
+            while N < N_per_step: #generate N_eh carrier at the point
+                self.carriers.append(Electron(positionX, positionY, z*1e6, N)) 
+                self.carriers.append(Hole(positionX, positionY, z*1e6, N))
                 N += 1
+            nStep += 1
         return self.carriers
    
 
