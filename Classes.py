@@ -96,7 +96,7 @@ class Geometry:
         # Start with fixed geoemtry to simplify and after making it more flexible
         self.xLen = xLen*1e-6 # um
         self.yLen = yLen*1e-6 # um
-        self.zLen = zLen*1e-6# um
+        self.zLen = zLen*1e-6 # um
         self.ZLenElec = zLen/10
         self.material = material
         self.Efield = [0,0,0] 
@@ -111,7 +111,7 @@ class Geometry:
         
     def CreateUniformZElectricField(self, deltaV):
         # V in volts
-        self.Efield = [0,0,-deltaV/(self.zLen*1e04)] # um to cm -> V/cm
+        self.Efield = [0,0,-deltaV/(self.zLen*1e04)] # um to cm -> V/cm REVER
         
     def CreatePlanarElectrodes(self):
         self.electrodes.append(PlanarElectrode(self.zLen/2, self.zLen/10, self.zLen, 1))
@@ -179,6 +179,8 @@ class CarrierDrift:
                 carrier.velocity[2] = v[2]
                 nStep += 1
                 self.ElectrodeIndCurrent(carrier, nStep)
+            #else:
+                #print(nStep)
                 #print(newPosition[2])
             #else:
             #    print("Done drifting")

@@ -27,8 +27,9 @@ for material in materials:
     dz = 0.1 #um
     z = (detector.zLen*1e6)/2
     ID = 0
-    while z > (-detector.zLen/2):
+    while z > (-detector.zLen*1e6/2):
         z -= dz 
+        #print(z)
         carriers.append(Electron(0,0,z,ID))
         carriers.append(Hole(0,0,z,ID))
         ID += 1
