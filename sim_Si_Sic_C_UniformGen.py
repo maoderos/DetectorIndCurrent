@@ -2,6 +2,8 @@ from Classes import *
 import matplotlib.pyplot as plt
 import numpy as np
 import time
+from scipy import integrate
+
 start_time = time.time()
 # Generate materials
 diamond = Diamond()
@@ -18,7 +20,7 @@ for material in materials:
     # Generate geometry
     detector = Geometry(700,700,500,material)
     particleGen = GenerateCarriers(detector)
-    detector.CreateUniformZElectricField(500)
+    detector.CreateUniformZElectricField(800)
     detector.CreatePlanarElectrodes()
     drift_model = CarrierDrift(detector, 0.001e-9)
 
@@ -44,9 +46,15 @@ for material in materials:
     h_y, h_x = data_hole.T
     
 
+    print("Charge collected: Q = {0} fC".format(integrate.simpson(t_y,t_x)*1e15))
+    plt.xlabel("t(s)")
+    plt.ylabel("I(A)")
     plt.plot(t_x, t_y, label="total current")
     plt.plot(e_x,e_y, label = "$e^-$")
     plt.plot(h_x,h_y, label = "h")
+    #plt.ylim(bottom=0)
+    #plt.xlim(bottom=0)
+    #plt.grid()
     del detector
     #del test_electron
     #del test_hole

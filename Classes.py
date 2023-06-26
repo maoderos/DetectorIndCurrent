@@ -3,9 +3,9 @@ from numba import jit
 
 class Carrier:
     def __init__(self, xo, yo, zo, trackID):
-        self.x = xo*1e-6 #um
-        self.y = yo*1e-6 #um
-        self.z = zo*1e-6 #um
+        self.x = xo*1e-6 #um to m
+        self.y = yo*1e-6 #um to m
+        self.z = zo*1e-6 #um to m
         self.t = [0]
         self.trackID = trackID
         self.track = [[self.x,self.y,self.z]]
@@ -94,9 +94,9 @@ class Diamond(Material):
 class Geometry:
     def __init__(self, xLen, yLen, zLen, material):
         # Start with fixed geoemtry to simplify and after making it more flexible
-        self.xLen = xLen*1e-6 # um
-        self.yLen = yLen*1e-6 # um
-        self.zLen = zLen*1e-6 # um
+        self.xLen = xLen*1e-6 # m
+        self.yLen = yLen*1e-6 # m
+        self.zLen = zLen*1e-6 # m
         self.ZLenElec = zLen/10
         self.material = material
         self.Efield = [0,0,0] 
@@ -111,7 +111,9 @@ class Geometry:
         
     def CreateUniformZElectricField(self, deltaV):
         # V in volts
-        self.Efield = [0,0,-deltaV/(self.zLen*1e04)] # um to cm -> V/cm REVER
+        d = self.zLen*1e2 #in cm
+        print("Creating Electric field from V bias of Vbias = {0}".format(deltaV))
+        self.Efield = [0,0,-deltaV/(d)] # um to cm -> V/cm REVER
         
     def CreatePlanarElectrodes(self):
         self.electrodes.append(PlanarElectrode(self.zLen/2, self.zLen/10, self.zLen, 1))
@@ -170,7 +172,7 @@ class CarrierDrift:
                 mu = self.geometry.material.mu_h_300k
                 v = [(mu*E[0]/((1 + (mu*E[0]/v_sat)**2))),(mu*E[1]/((1 + (mu*E[1]/v_sat)**2))),(mu*E[2]/((1 + (mu*E[2]/v_sat)**2)))]
         
-            newPosition = [(newPosition[0] + signal*v[0]*self.dt), (newPosition[1] + signal*v[1]*self.dt), (newPosition[2] + signal*v[2]*self.dt)]
+            newPosition = [(newPosition[0] + signal*v[0]*(1e-2)*self.dt), (newPosition[1] + signal*v[1]*(1e-2)*self.dt), (newPosition[2] + signal*v[2]*(1e-2)*self.dt)]
             isParticleInBoundary = self.geometry.CheckBoundary(newPosition)
             if(isParticleInBoundary == False):
                 #carrier.track.append(newPosition)
@@ -199,17 +201,20 @@ class GenerateCarriers:
         positionX = 0
         initialPosZ = self.geometry.zLen/2
         finalPosZ = -self.geometry.zLen/2
-        dz = (self.geometry.zLen/10)
+        #dz = 0.1e-6
+        dz = 1e-6
         N_total = self.geometry.zLen*self.geometry.material.elecHoleNumber_MIP*1e06
         steps = int(self.geometry.zLen/dz) - 1
+        #N_per_step = round(N_total/(steps))
         N_per_step = int(N_total/(steps))
+        print("Generating {0} e-h pairs per {1} m \n Total e-h pairs: {2}".format(N_per_step,dz,N_total))
         z = initialPosZ
         nStep = 1
         while(nStep <= steps):
             N = 1
             z = initialPosZ - nStep*dz
             #print(z*1e6)
-            while N < N_per_step: #generate N_eh carrier at the point
+            while N <= N_per_step: #generate N_eh carrier at the point
                 self.carriers.append(Electron(positionX, positionY, z*1e6, N)) 
                 self.carriers.append(Hole(positionX, positionY, z*1e6, N))
                 N += 1
@@ -220,7 +225,7 @@ class GenerateCarriers:
 class PlanarElectrode:
     def __init__(self, z, width, d, electrodeId):
         self.width = width
-        self.d = d*1e04 # um to cm
+        self.d = d # m 
         self.electrodeId = electrodeId
         self.current_e_t = [] # C/s = A
         self.current_h_t = [] #C/s = A
@@ -230,9 +235,9 @@ class PlanarElectrode:
     def WeightingField(self, electrode, x=0,y=0,z=0,):
         # MELHORAR
         if (self.electrodeId == 1):
-            return [0,0,-1/(self.d)]
+            return [0,0,-1/(self.d*1e2)] # 1/cm
         else:
-            return [0,0,1/(self.d)]
+            return [0,0,1/(self.d*1e2)] # 1/cm
         
 
     
