@@ -18,9 +18,10 @@ plt.xlabel("t(s)")
 plt.ylabel("Current")
 for material in materials:
     # Generate geometry
-    detector = Geometry(700,700,500,material)
+    detector = Geometry(700,700,400,material)
     particleGen = GenerateCarriers(detector)
-    detector.CreateUniformZElectricField(800)
+    #detector.CreateUniformZElectricField(800)
+    detector.CreateUniformZElectricField(400)
     detector.CreatePlanarElectrodes()
     drift_model = CarrierDrift(detector, 0.001e-9)
 
@@ -35,6 +36,11 @@ for material in materials:
             position.append(z_pos)
     print(position)
     '''
+    print("###################")
+    print("Start drifting carriers:")
+    print("Infos:")
+    print("Material: {0}\nDensity: {1} g/cm3\nElectron Mobility: {2} cm2/Vs \nElectron Mobility: {3} cm2/Vs".format(material.name, material.density, material.mu_e_300k, material.mu_h_300k)) 
+    print("Saturation velocity = {0} cm/s".format(material.v_sat))
     for carrier in carriers:
         drift_model.DriftCarrier(carrier)
     materialName = detector.material.name
@@ -49,15 +55,16 @@ for material in materials:
     print("Charge collected: Q = {0} fC".format(integrate.simpson(t_y,t_x)*1e15))
     plt.xlabel("t(s)")
     plt.ylabel("I(A)")
-    plt.plot(t_x, t_y, label="total current")
-    plt.plot(e_x,e_y, label = "$e^-$")
-    plt.plot(h_x,h_y, label = "h")
+    plt.plot(t_x, t_y, label="{0}".format(material.name))
+    #plt.plot(e_x,e_y, label = "$e^-$")
+    #plt.plot(h_x,h_y, label = "h")
     #plt.ylim(bottom=0)
     #plt.xlim(bottom=0)
     #plt.grid()
     del detector
     #del test_electron
     #del test_hole
+    print("###################")
 
 plt.legend()
 plt.savefig("current.pdf")

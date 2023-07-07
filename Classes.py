@@ -39,6 +39,7 @@ class Hole(Carrier):
 
 class Material:
     def __init__(self, name, density, mu_e, mu_h, v_sat, av_eh_energy, elecHoleNumber_MIP):
+        self.Name = name
         self.density = density # g/cm3 
         self.mu_e_300k = mu_e # cm2/Vs
         self.mu_h_300k = mu_h # cm2/Vs
