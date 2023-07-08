@@ -10,8 +10,8 @@ diamond = Diamond()
 silicon = Silicon()
 siliconCarbide = SiliconCarbide()
 
-#materials = [diamond, silicon, siliconCarbide]
-materials = [diamond]
+materials = [diamond, silicon, siliconCarbide]
+#$materials = [diamond]
 plt.figure()
 plt.title("Induced corrent on electrode")
 plt.xlabel("t(s)")
@@ -40,7 +40,8 @@ for material in materials:
     print("Start drifting carriers:")
     print("Infos:")
     print("Material: {0}\nDensity: {1} g/cm3\nElectron Mobility: {2} cm2/Vs \nElectron Mobility: {3} cm2/Vs".format(material.name, material.density, material.mu_e_300k, material.mu_h_300k)) 
-    print("Saturation velocity = {0} cm/s".format(material.v_sat))
+    print("Electron Saturation velocity = {0} cm/s".format(material.v_sat_e))
+    print("Hole Saturation velocity = {0} cm/s".format(material.v_sat_e))
     for carrier in carriers:
         drift_model.DriftCarrier(carrier)
     materialName = detector.material.name
