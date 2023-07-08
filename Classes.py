@@ -68,7 +68,8 @@ class Silicon(Material):
         self.density = 2.33 # https://doi.org/10.3389/fphy.2022.898833
         self.mu_e_300k = 1450
         self.mu_h_300k = 450
-        self.v_sat = 0.8e07
+        self.v_sat_e = 0.8e07
+        self.v_sat_h = 0.8e07
         self.av_eh_energy = 3.6
         self.elecHoleNumber_MIP = 89 # DOI: 10.1109/TNS.2004.825095
         
@@ -78,7 +79,8 @@ class SiliconCarbide(Material):
         self.density = 3.22 # https://doi.org/10.3389/fphy.2022.898833
         self.mu_e_300k = 800
         self.mu_h_300k = 115
-        self.v_sat = 2e07
+        self.v_sat_e = 2.2e07
+        self.v_sat_h = 2.2e07
         self.av_eh_energy = 7.6
         self.elecHoleNumber_MIP = 55 # DOI: 10.1109/TNS.2004.825095
         
@@ -86,9 +88,12 @@ class Diamond(Material):
     def __init__(self):
         self.name = "Diamond"
         self.density = 3.51 # https://doi.org/10.3389/fphy.2022.898833
+        #self.mu_e_300k = 4551
+        #self.mu_h_300k = 2750
         self.mu_e_300k = 1800
         self.mu_h_300k = 1200
-        self.v_sat = 2.2e07
+        self.v_sat_e = 2.2e07
+        self.v_sat_h = 2.2e07
         self.av_eh_energy = 13
         self.elecHoleNumber_MIP = 37 #26/06/2017 CERN-THESIS-2017-487
             
@@ -163,16 +168,18 @@ class CarrierDrift:
         v = 0
         while(isParticleInBoundary == False):
             E = self.geometry.Efield
-            v_sat = self.geometry.material.v_sat
             if carrier.charge < 0:
                 signal = -1
                 mu = self.geometry.material.mu_e_300k
+                v_sat = self.geometry.material.v_sat_e
                 v = [(mu*E[0]/(np.sqrt(1 + (mu*E[0]/v_sat)**2))),(mu*E[1]/(np.sqrt(1 + (mu*E[1]/v_sat)**2))),(mu*E[2]/(np.sqrt(1 + (mu*E[2]/v_sat)**2)))]
+            
             elif carrier.charge > 0:
                 signal = 1
                 mu = self.geometry.material.mu_h_300k
-                v = [(mu*E[0]/((1 + (mu*E[0]/v_sat)**2))),(mu*E[1]/((1 + (mu*E[1]/v_sat)**2))),(mu*E[2]/((1 + (mu*E[2]/v_sat)**2)))]
-        
+                v_sat = self.geometry.material.v_sat_h
+                v = [(mu*E[0]/(1 + (mu*abs(E[0])/v_sat))),(mu*E[1]/(1 + (mu*abs(E[1])/v_sat))),(mu*E[2]/(1 + (mu*abs(E[2])/v_sat)))]
+            
             newPosition = [(newPosition[0] + signal*v[0]*(1e-2)*self.dt), (newPosition[1] + signal*v[1]*(1e-2)*self.dt), (newPosition[2] + signal*v[2]*(1e-2)*self.dt)]
             isParticleInBoundary = self.geometry.CheckBoundary(newPosition)
             if(isParticleInBoundary == False):

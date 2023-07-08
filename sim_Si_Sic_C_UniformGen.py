@@ -18,10 +18,10 @@ plt.xlabel("t(s)")
 plt.ylabel("Current")
 for material in materials:
     # Generate geometry
-    detector = Geometry(700,700,400,material)
+    detector = Geometry(700,700,500,material)
     particleGen = GenerateCarriers(detector)
     #detector.CreateUniformZElectricField(800)
-    detector.CreateUniformZElectricField(400)
+    detector.CreateUniformZElectricField(800)
     detector.CreatePlanarElectrodes()
     drift_model = CarrierDrift(detector, 0.001e-9)
 
@@ -56,8 +56,8 @@ for material in materials:
     plt.xlabel("t(s)")
     plt.ylabel("I(A)")
     plt.plot(t_x, t_y, label="{0}".format(material.name))
-    #plt.plot(e_x,e_y, label = "$e^-$")
-    #plt.plot(h_x,h_y, label = "h")
+    plt.plot(e_x,e_y, label = "$e^-$")
+    plt.plot(h_x,h_y, label = "h")
     #plt.ylim(bottom=0)
     #plt.xlim(bottom=0)
     #plt.grid()
