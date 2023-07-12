@@ -3,6 +3,7 @@ from numba import jit
 
 class Carrier:
     def __init__(self, xo, yo, zo, trackID):
+        self.name = "Carrier"
         self.x = xo*1e-6 #um to m
         self.y = yo*1e-6 #um to m
         self.z = zo*1e-6 #um to m
@@ -30,23 +31,32 @@ class Carrier:
 class Electron(Carrier):
     def __init__(self, xo, yo, zo, trackID):
         super().__init__(xo, yo, zo, trackID)
+        self.name = "Electron"
         self.charge = -1.602e-19
     
 class Hole(Carrier):
     def __init__(self, xo, yo, zo, trackID):
         super().__init__(xo, yo, zo, trackID)
+        self.name = "Hole"
         self.charge = 1.602e-19
 
 class Material:
-    def __init__(self, name, density, mu_e, mu_h, v_sat, av_eh_energy, elecHoleNumber_MIP):
-        self.Name = name
+    def __init__(self, name, density, mu_e, mu_h, v_sat_e, v_sat_h,av_eh_energy, elecHoleNumber_MIP):
+        self.name = name
         self.density = density # g/cm3 
         self.mu_e_300k = mu_e # cm2/Vs
         self.mu_h_300k = mu_h # cm2/Vs
-        self.v_sat = v_sat*10e2 # cm/s
+        self.v_sat_e = v_sat_e*10e2 # cm/s
+        self.v_sat_h = v_sat_h*10e2 # cm/s
         self.av_eh_energy = av_eh_energy # eV
         self.elecHoleNumber_MIP = elecHoleNumber_MIP # N/um
+    
+    def __str__(self):
+        return "Material properties:\nName: {0}\ndensity: {1} g/cm3\nElectron mobility: {2} cm2/Vs\nHole mobility: {3} cm2/Vs\nElectron sat.velocity: {4} cm/s\nHole sat.velocity: {5} cm/s\nAverage e/h generation: {6}/um\n".format(self.name, self.density, self.mu_e_300k, self.mu_h_300k, self.v_sat_e, self.v_sat_h, self.elecHoleNumber_MIP)
         
+    def Info(self):
+        return "Material properties:\nName: {0}\ndensity: {1} g/cm3\nElectron mobility: {2} cm2/Vs\nHole mobility: {3} cm2/Vs\nElectron sat.velocity: {4} cm/s\nHole sat.velocity: {5} cm/s\nAverage e/h generation: {6}/um\n".format(self.name, self.density, self.mu_e_300k, self.mu_h_300k, self.v_sat_e, self.v_sat_h, self.elecHoleNumber_MIP)
+
     def GetMu_e_300k(self):
         return self.mu_e_300k
     
@@ -70,6 +80,7 @@ class Silicon(Material):
         self.mu_h_300k = 450
         self.v_sat_e = 0.8e07
         self.v_sat_h = 0.8e07
+        self.inverse_trap = 0
         self.av_eh_energy = 3.6
         self.elecHoleNumber_MIP = 89 # DOI: 10.1109/TNS.2004.825095
         
@@ -81,12 +92,13 @@ class SiliconCarbide(Material):
         self.mu_h_300k = 115
         self.v_sat_e = 2.2e07
         self.v_sat_h = 2.2e07
+        self.inverse_trap = 0
         self.av_eh_energy = 7.6
         self.elecHoleNumber_MIP = 55 # DOI: 10.1109/TNS.2004.825095
         
 class Diamond(Material):
     def __init__(self):
-        self.name = "Diamond"
+        self.name = "Diamond SC"
         self.density = 3.51 # https://doi.org/10.3389/fphy.2022.898833
         #self.mu_e_300k = 4551
         #self.mu_h_300k = 2750
@@ -94,8 +106,24 @@ class Diamond(Material):
         self.mu_h_300k = 1200
         self.v_sat_e = 2.2e07
         self.v_sat_h = 2.2e07
+        self.inverse_trap = 0
         self.av_eh_energy = 13
         self.elecHoleNumber_MIP = 37 #26/06/2017 CERN-THESIS-2017-487
+
+class DiamondPC(Material):
+    def __init__(self):
+        self.name = "Diamond PC"
+        self.density = 3.51 # https://doi.org/10.3389/fphy.2022.898833
+        #self.mu_e_300k = 4551
+        #self.mu_h_300k = 2750
+        self.mu_e_300k = 1800
+        self.mu_h_300k = 1200
+        self.v_sat_e = 2.2e07
+        self.v_sat_h = 2.2e07
+        self.inverse_trap = 10e-9 
+        self.av_eh_energy = 13
+        self.elecHoleNumber_MIP = 37 #26/06/2017 CERN-THESIS-2017-487
+            
             
 class Geometry:
     def __init__(self, xLen, yLen, zLen, material):
@@ -141,7 +169,7 @@ class CarrierDrift:
             while(j < 3):
                 Wfield_v += v[j]*Wfield[j]
                 j += 1
-            i = abs(carrier.charge)*Wfield_v
+            i = abs(carrier.charge)*Wfield_v*np.exp(nStep*self.dt*self.geometry.material.inverse_trap)
             if (carrier.charge < 0):
                 if ( nStep > len(electrode.current_e_t)):
                     electrode.current_e_t.append([i,nStep*self.dt])
@@ -201,10 +229,12 @@ class GenerateCarriers:
     def __init__(self, geometry):
         self.carriers = []
         self.geometry = geometry 
+        self.GenCarrierName = "UniformMIP"
         
     def GenerateUniformCarrierGeometry(self):
         # Starts at (0,0,-len/2) for simplicity (Improve later)
         ## NEED REVIEW
+        self.GenCarrierName = "UniformMIP"
         positionY = 0
         positionX = 0
         initialPosZ = self.geometry.zLen/2
