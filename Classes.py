@@ -1,5 +1,5 @@
 import numpy as np
-from numba import jit
+import os 
 
 class Carrier:
     def __init__(self, xo, yo, zo, trackID):
@@ -50,6 +50,7 @@ class Material:
         self.v_sat_h = v_sat_h*10e2 # cm/s
         self.av_eh_energy = av_eh_energy # eV
         self.elecHoleNumber_MIP = elecHoleNumber_MIP # N/um
+        self.state = 0 
     
     def __str__(self):
         return "Material properties:\nName: {0}\ndensity: {1} g/cm3\nElectron mobility: {2} cm2/Vs\nHole mobility: {3} cm2/Vs\nElectron sat.velocity: {4} cm/s\nHole sat.velocity: {5} cm/s\nAverage e/h generation: {6}/um\n".format(self.name, self.density, self.mu_e_300k, self.mu_h_300k, self.v_sat_e, self.v_sat_h, self.elecHoleNumber_MIP)
@@ -258,8 +259,35 @@ class GenerateCarriers:
                 N += 1
             nStep += 1
         return self.carriers
-   
 
+    def GenerateGeant4Carrier(self, filename):
+        # Just loading yet... implement the simulation through here also
+        import uproot
+        # Get current directory
+        cwd = os.getcwd()
+        file = uproot.open("{0}/EnergyDistribution/{1}:Step".format(cwd,filename))
+        x = list(file["fXPos"].array(library="np"))
+        y = list(file["fYPos"].array(library="np"))
+        z = list(file["fZPos"].array(library="np"))
+        eDep = list(file["fEdep"].array(library="np"))
+        # Create carriers and put in the same reference frame (Change later to put the same as Geant4)
+        i = 0 
+        idd = 0
+        #nEdep = 0
+        while(i < len(z)):
+            Ncarriers = round(eDep[i]/self.geometry.material.av_eh_energy)
+            #nEdep += eDep[i]
+            j = 0
+            while (j < Ncarriers):
+                self.carriers.append(Electron(x[i], y[i], (z[i] - self.geometry.zLen*1e6/2), idd)) 
+                self.carriers.append(Hole(x[i], y[i], (z[i] - self.geometry.zLen*1e6/2), idd))
+                idd += 1
+                j += 1
+            i += 1
+        #print(nEdep)
+        #print(nEdep/self.geometry.material.elecHoleNumber_MIP)
+        return self.carriers
+                
 class PlanarElectrode:
     def __init__(self, z, width, d, electrodeId):
         self.width = width
